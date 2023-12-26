@@ -1,0 +1,35 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">BCWebApp</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-clipboard-plus" aria-hidden="true">&nbsp;&nbsp;&nbsp;</span> Клиенты
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="order">
+                <span class="bi bi-cart-plus" aria-hidden="true"></span> Заказы
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="worker">
+                <span class="bi bi-person-plus" aria-hidden="true"></span> Рабочие
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="brigade">
+                <span class="bi bi-journal-plus" aria-hidden="true"></span> Бригады
+            </NavLink>
+        </div>
+    </nav>
+</div>
+

@@ -1,0 +1,161 @@
+﻿@page "/worker"
+@using BCWebApp.Models
+@inject IHttpClientFactory ClientFactory
+
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>Рабочие</PageTitle>
+
+<div class="container-fluid">
+    <table class="table table-bordered table-striped table-sm">
+        <thead>
+            <tr>
+                <th>
+                    Фамилия
+                </th>
+                <th>
+                    Имя
+                </th>
+                <th>
+                    Отчество
+                </th>
+                <th>
+                    Бригада
+                </th>
+                <th>
+                    Должность
+                </th>
+                <th>
+                    Адресс
+                </th>
+                <th>
+                    Номер телефона
+                </th>
+                <th>
+                    Изменение
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (Models.WorkerService w in workers)
+            {
+                <tr>
+                    <td>@w.Surname</td>
+                    <td>@w.Firstname</td>
+                    <td>@w.Lastname</td>
+                    <td>@w.IdBrigade</td>
+                    <td>@w.Post</td>
+                    <td>@w.Adress</td>
+                    <td>@w.Number</td>
+
+                    <td>
+                        <a class="btn btn-primary" @onclick="()=>Edit(w)">Изменить</a>
+                        <a class="btn btn-primary" @onclick="@(async ()=>await Delete(w.IdWorker))">Удалить</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div>
+    <EditForm Model="@worker" OnSubmit="Submit" class="m-2">
+        <div class="form-group">
+            Фамилия:<br />
+            <InputText @bind-Value="worker.Surname" class="form-control" />
+        </div>
+        <p>
+            Имя:<br />
+            <InputText @bind-Value="worker.Firstname" class="form-control" />
+        </p>
+        <p>
+            Отчество:<br />
+            <InputText @bind-Value="worker.Lastname" class="form-control" />
+        </p>
+        <p>
+            Бригада:<br />
+            <InputSelect class="form-control" @bind-Value="brigade.IdBrigade">
+                <option selected value="">None</option>
+                @foreach (var b in brigades)
+                {
+                    <option value="@b.IdBrigade">
+                        @(b.BrigadeName)
+                        @(b?.BrigadeSpec?.Substring(1, 1)).
+                    </option>
+                }
+            </InputSelect>
+        </p>
+        <p>
+            Должность:<br />
+            <InputText @bind-Value="worker.Post" class="form-control" />
+        </p>
+        <p>
+            Адресс:<br />
+            <InputText @bind-Value="worker.Adress" class="form-control" />
+        </p>
+        <p>
+            Номер телефона:<br />
+            <InputText @bind-Value="worker.Number" class="form-control" />
+        </p>
+        <button type="submit">
+            Отправить
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    List<Models.WorkerService> workers = [];
+    Models.WorkerService worker = new();
+    HttpClient httpClient = new HttpClient();
+    List<Models.BrigadeService> brigades = [];
+    BrigadeService brigade = new();
+
+    void Edit(WorkerService p)
+    {
+        worker.IdWorker = p.IdWorker;
+        worker.IdBrigade = p.IdBrigade;
+        worker.Surname = p.Surname;
+        worker.Firstname = p.Firstname;
+        worker.Lastname = p.Lastname;
+        worker.Adress = p.Adress;
+        worker.Number = p.Number;
+        worker.Post = p.Post;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        httpClient = ClientFactory.CreateClient();
+        httpClient.BaseAddress = new Uri("https://localhost:7019/api/worker");
+        await LoadData();
+    }
+    async Task LoadData()
+    {
+            workers = await httpClient.GetFromJsonAsync<List<Models.WorkerService>>
+        (httpClient.BaseAddress) ?? workers;
+            brigades = await httpClient.GetFromJsonAsync<List<BrigadeService>>
+        (new Uri("https://localhost:7019/api/brigade")) ?? brigades;
+    }
+    async Task Submit()
+    {
+        if (worker.IdWorker == 0)
+            await httpClient.PostAsJsonAsync(httpClient.BaseAddress, worker);
+        else
+            await httpClient.PutAsJsonAsync(httpClient.BaseAddress, worker);
+        worker.IdWorker = 0;
+        worker.Surname = "";
+        worker.Firstname = "";
+        worker.Lastname = "";
+        worker.Adress = "";
+        worker.Number = "";
+        worker.Post = "";
+        await LoadData();
+    }
+    void Reset()
+    {
+        worker.IdWorker = 0;
+    }
+    async Task Delete(int id)
+    {
+        await httpClient.DeleteAsync($"{httpClient.BaseAddress}/{id}");
+        await LoadData();
+    }
+}

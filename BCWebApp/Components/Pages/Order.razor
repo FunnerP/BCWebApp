@@ -1,0 +1,176 @@
+﻿@page "/order"
+@using BCWebApp.Models
+@inject IHttpClientFactory ClientFactory
+
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>Заказы</PageTitle>
+
+<div class="container-fluid">
+
+    <table class="table table-bordered table-striped table-sm">
+        ,
+        <thead>
+            <tr>
+                <th>
+                    Клиент
+                </th>
+                <th>
+                    Бригада
+                </th>
+                <th>
+                    Дата
+                </th>
+                <th>
+                    Цена
+                </th>
+                <th>
+                    Изменение
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (AndrushkinOrder o in list)
+            {
+                <tr>
+                    <td>@o.ClentAndrushkin</td>
+                    <td>@o.AndrushkinBrigade</td>
+                    <td>@o.Date</td>
+                    <td>@o.Cost</td>
+                    <td>
+                        <a class="btn btn-primary" @onclick="()=>Edit(o)">Изменить</a>
+                        <a class="btn btn-primary" @onclick="@(async ()=>await Delete(o.IdOrder))">Удалить</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div class="col">
+    <EditForm Model="@order" OnSubmit="Submit" class="m-2">
+        <p>
+            Клиент: <br/>
+              <InputSelect class="form-control" @bind-Value="order.IdClient">
+                <option selected value="">None</option>
+                @foreach (var c in clients)
+                {
+                    <option value="@c.IdClient">
+                        @(c.Surname)
+                        @(c?.Firstname?.Substring(1, 1)).
+                        @(c?.Lastname?.Substring(1, 1)).
+                    </option>
+                }
+            </InputSelect>
+        </p>
+        <p>
+            Бригада:<br />
+            <InputSelect class="form-control" @bind-Value="order.IdBrigade">
+                <option selected value="">None</option>
+                @foreach (var b in brigades)
+                {
+                    <option value="@b.IdBrigade">
+                        @(b.IdBrigade)
+                    </option>
+                }
+            </InputSelect>
+        </p>
+        <p>
+            Дата:<br />
+            <InputDate @bind-Value="order.Date" class="form-control" />
+        </p>
+        <p>
+            Цена:<br />
+            <InputNumber @bind-Value="order.Cost" class="form-control" />
+        </p>
+        <button type="submit">
+            Отправить
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    List<Models.OrderService> orders = [];
+    List<BrigadeService> brigades = [];   
+    Models.OrderService order = new();
+    HttpClient httpClient = new HttpClient();
+    List<ClientService> clients = new();
+    ClientService client = new();
+    List<Order> listOrder = new();
+    List<AndrushkinOrder> list = [];
+    AndrushkinOrder single = new();
+
+    void Edit(AndrushkinOrder p)
+    {
+        order.IdOrder = p.IdOrder;
+        order.IdClient = p.IdClient;
+        order.IdBrigade = p.IdBrigade;
+        order.Date = p.Date;
+        order.Cost = p.Cost;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        httpClient = ClientFactory.CreateClient();
+        httpClient.BaseAddress = new Uri("https://localhost:7019/api/order");
+        await LoadData();
+    }
+    async Task LoadData()
+    {
+        orders = await httpClient.GetFromJsonAsync<List<Models.OrderService>>
+        (httpClient.BaseAddress) ?? orders;
+        brigades = await httpClient.GetFromJsonAsync<List<BrigadeService>>
+        (new Uri("https://localhost:7019/api/brigade")) ?? brigades;
+        clients = await httpClient.GetFromJsonAsync<List<ClientService>>
+        (new Uri("https://localhost:7019/api/client")) ?? clients;
+        foreach(OrderService i in orders)
+        {
+            BrigadeService? bName = await httpClient.GetFromJsonAsync<BrigadeService>
+            (new Uri("https://localhost:7019/api/brigade/" + i.IdBrigade));
+            ClientService? cService = await httpClient.GetFromJsonAsync<ClientService>
+        (new Uri("https://localhost:7019/api/client/" + i.IdClient));
+            list.Add(new AndrushkinOrder
+            {
+                IdOrder=i.IdOrder,
+                AndrushkinBrigade =bName.BrigadeName,
+                IdBrigade=i.IdBrigade,
+                ClentAndrushkin=cService.Surname,
+                Cost=i.Cost,
+                Date=i.Date,
+                IdClient=i.IdClient
+            });
+        }
+
+    }
+    async Task Submit()
+    {
+        if (order.IdOrder == 0)
+            await httpClient.PostAsJsonAsync(httpClient.BaseAddress, order);
+        else
+            await httpClient.PutAsJsonAsync(httpClient.BaseAddress, order);
+        order.IdOrder = 0;
+        order.IdClient = 0;
+        order.IdBrigade = 0;
+        order.Date = new DateTime();
+        order.Cost = 0;
+        await LoadData();
+    }
+    void Reset()
+    {
+        client.IdClient = 0;
+    }
+    async Task Delete(int id)
+    {
+        await httpClient.DeleteAsync($"{httpClient.BaseAddress}/{id}");
+        await LoadData();
+    }
+    class AndrushkinOrder
+    {
+        public int IdOrder { get; set; }
+        public int? IdClient { get; set; }
+        public string? ClentAndrushkin { get; set; }
+        public int? IdBrigade { get; set; }
+        public string? AndrushkinBrigade{ get; set; }
+        public DateTime? Date { get; set; }
+        public int? Cost { get; set; }
+    }
+}

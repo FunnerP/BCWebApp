@@ -1,0 +1,140 @@
+﻿@page "/"
+@using BCWebApp.Models
+@inject IHttpClientFactory ClientFactory
+
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>Клиенты</PageTitle>
+
+<div class="container-fluid">
+    <table class="table table-bordered table-striped table-sm">
+        <thead>
+            <tr>
+                <th>
+                    Фамилия
+                </th>
+                <th>
+                    Имя
+                </th>
+                <th>
+                    Отчество
+                </th>
+                <th>
+                    Адресс
+                </th>
+                <th>
+                    Номер телефона
+                </th>
+                <th>
+                    Баланс
+                </th>
+                <th>
+                    Изменение
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (ClientService c in clients)
+            {
+                <tr>
+                    <td>@c.Surname</td>
+                    <td>@c.Firstname</td>
+                    <td>@c.Lastname</td>
+                    <td>@c.Adress</td>
+                    <td>@c.Number</td>
+                    <td>@c.Balance</td>
+                    <td>
+                        <a class="btn btn-primary" @onclick="()=>Edit(c)">Изменить</a>
+                        <a class="btn btn-primary" @onclick="@(async ()=>await Delete(c.IdClient))">Удалить</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div class="col">
+    <EditForm Model="@client" OnSubmit="Submit" class="m-2">
+        <p class="form-group">
+            Фамилия:<br />
+            <InputText @bind-Value="client.Surname" class="form-control" />
+        </p>
+        <p>
+            Имя:<br />
+            <InputText @bind-Value="client.Firstname" class="form-control" />
+        </p>
+        <p>
+            Отчество:<br />
+            <InputText @bind-Value="client.Lastname" class="form-control" />
+        </p>
+        <p>
+            Адресс:<br />
+            <InputText @bind-Value="client.Adress" class="form-control" />
+        </p>
+        <p>
+            Номер телефона:<br />
+            <InputText @bind-Value="client.Number" class="form-control" />
+        </p>
+        <p>
+            Баланс:<br />
+            <InputNumber @bind-Value="client.Balance" class="form-control" />
+        </p>
+        <button type="submit">
+            Отправить
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    List<ClientService> clients = [];
+    ClientService client = new();
+    HttpClient httpClient = new HttpClient();
+    
+
+    void Edit(ClientService p)
+    {
+        client.IdClient = p.IdClient;
+        client.Surname = p.Surname;
+        client.Firstname = p.Firstname;
+        client.Lastname = p.Lastname;
+        client.Adress = p.Adress;
+        client.Number = p.Number;
+        client.Balance = p.Balance;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        httpClient = ClientFactory.CreateClient();
+        httpClient.BaseAddress = new Uri("https://localhost:7019/api/client");
+        await LoadData();
+    }
+    async Task LoadData()
+    {
+        clients = await httpClient.GetFromJsonAsync<List<ClientService>>
+        (httpClient.BaseAddress) ?? clients;
+
+    }
+    async Task Submit()
+    {
+        if (client.IdClient == 0)
+            await httpClient.PostAsJsonAsync(httpClient.BaseAddress, client);
+        else
+            await httpClient.PutAsJsonAsync(httpClient.BaseAddress, client);
+        client.IdClient = 0;
+        client.Surname = "";
+        client.Firstname = "";
+        client.Lastname = "";
+        client.Adress = "";
+        client.Number = "";
+        client.Balance = 0;
+        await LoadData();
+    }
+    void Reset()
+    {
+        client.IdClient = 0;
+    }
+    async Task Delete(int id)
+    {
+        await httpClient.DeleteAsync($"{httpClient.BaseAddress}/{id}");
+        await LoadData();
+    }
+}

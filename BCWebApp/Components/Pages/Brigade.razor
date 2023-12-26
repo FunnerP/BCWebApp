@@ -1,0 +1,102 @@
+﻿@page "/brigade"
+@using BCWebApp.Models
+@inject IHttpClientFactory ClientFactory
+
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>Бригады</PageTitle>
+
+<div>
+    <table>
+        <thead>
+            <tr>
+                <th>
+                    Название бригады
+                </th>
+                <th>
+                    Специальность бригады
+                </th>
+                <th>
+                    Изменение
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (Models.BrigadeService b in brigades)
+            {
+                <tr>
+                    <td>@b.BrigadeName</td>
+                    <td>@b.BrigadeSpec</td>
+                    <td>
+                        <a class="btn btn-primary" @onclick="()=>Edit(b)">Изменить</a>
+                        <a class="btn btn-primary" @onclick="@(async ()=>await Delete(b.IdBrigade))">Удалить</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+<div>
+    <EditForm Model="@brigade" OnSubmit="Submit" class="m-2">
+        <p class="form-group">
+            Название бригады:<br />
+            <InputText @bind-Value="brigade.BrigadeName" class="form-control" />
+        </p>
+        <p class="form-group">
+            Специальность бригады:<br />
+            <InputText @bind-Value="brigade.BrigadeSpec" class="form-control" />
+        </p>
+        <button type="submit">
+            Отправить
+        </button>
+    </EditForm>
+</div>
+
+@code {
+    List<Models.BrigadeService> brigades = [];
+    Models.BrigadeService brigade = new();
+    HttpClient httpClient = new HttpClient();
+    List<Models.WorkerService> workers = [];
+    Models.WorkerService worker = new();
+
+    void Edit(BrigadeService p)
+    {
+        brigade.IdBrigade = p.IdBrigade;
+        brigade.BrigadeName = p.BrigadeName;
+        brigade.BrigadeSpec = p.BrigadeSpec;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        httpClient = ClientFactory.CreateClient();
+        httpClient.BaseAddress = new Uri("https://localhost:7019/api/brigade");
+        await LoadData();
+    }
+    async Task LoadData()
+    {
+        brigades = await httpClient.GetFromJsonAsync<List<Models.BrigadeService>>
+    (httpClient.BaseAddress) ?? brigades;
+        workers = await httpClient.GetFromJsonAsync<List<Models.WorkerService>>
+    (new Uri("https://localhost:7019/api/worker")) ?? workers;
+    }
+    async Task Submit()
+    {
+        if (brigade.IdBrigade == 0)
+            await httpClient.PostAsJsonAsync(httpClient.BaseAddress, brigade);
+        else
+            await httpClient.PutAsJsonAsync(httpClient.BaseAddress, brigade);
+        brigade.IdBrigade = 0;
+        brigade.BrigadeName = "";
+        brigade.BrigadeSpec = "";
+        await LoadData();
+    }
+    void Reset()
+    {
+        brigade.IdBrigade = 0;
+    }
+    async Task Delete(int id)
+    {
+        await httpClient.DeleteAsync($"{httpClient.BaseAddress}/{id}");
+        await LoadData();
+    }
+}
